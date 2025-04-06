@@ -1,0 +1,11 @@
+[package]
+name = "GB"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+env_logger = "0.11.7"
+log = "0.4.26"
+sdl3 = "0.14.11"
