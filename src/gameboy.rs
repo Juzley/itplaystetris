@@ -13,6 +13,8 @@ pub struct Gameboy {
     ticks: u16,
     timer_ticks: u16,
     div_ticks: u16,
+
+    cycle_remainder: i32,
 }
 
 impl Default for Gameboy {
@@ -24,12 +26,21 @@ impl Default for Gameboy {
             ticks: 0,
             timer_ticks: 0,
             div_ticks: 0,
+            cycle_remainder: 0,
         }
     }
 }
 
 impl Gameboy {
-    pub fn step<T: Canvas>(&mut self, canvas: &mut T, tile_canvas: Option<&mut T>) {
+    pub fn step_cycles<T: Canvas>(&mut self, target_cycles: u64, canvas: &mut T, tile_canvas: Option<&mut T>) {
+        self.cycle_remainder += target_cycles as i32;
+
+        while self.cycle_remainder > 0 {
+            self.cycle_remainder -= self.step(canvas, None) as i32;
+        }
+    }
+
+    fn step<T: Canvas>(&mut self, canvas: &mut T, tile_canvas: Option<&mut T>) -> u16 {
         let cycles = self.cpu.exec(&mut self.memory) as u16;
         self.ticks += cycles;
         self.update_timer(cycles);
@@ -38,10 +49,14 @@ impl Gameboy {
             self.display.render_line(&mut self.memory, canvas);
             self.ticks -= SCANLINE_TICKS;
 
-            if tile_canvas.is_some() && self.memory.ly == 0 {
-                self.display.dump_tiles(&self.memory, tile_canvas.unwrap());
+            if self.memory.ly == 0 {
+                if let Some(tc) = tile_canvas {
+                    self.display.dump_tiles(&self.memory,tc);
+                }
             }
         }
+
+        return cycles;
     }
 
     pub fn button_pressed(&mut self, button: Button) {

@@ -13,9 +13,12 @@ use sdl3::keyboard::Keycode;
 use sdl3::pixels::Color;
 use sdl3::rect::Point;
 use sdl3::render::WindowCanvas;
+use sdl3::timer::{performance_counter, performance_frequency};
 
 use display::Canvas;
 use gameboy::Gameboy;
+
+const CLOCK_FREQ: u64 = 4194304;
 
 impl Canvas for WindowCanvas {
     fn draw_pixel(&mut self, x: u16, y: u16, colour: Color) {
@@ -44,9 +47,6 @@ fn main() {
         .build()
         .unwrap();
 
-    let display = window.get_display().unwrap();
-    let display_mode = display.get_mode().unwrap();
-
     let mut canvas = window.into_canvas();
     canvas.set_draw_color(Color::RGB(0, 0, 0));
     canvas.clear();
@@ -67,6 +67,8 @@ fn main() {
 
     let mut gb: Gameboy = Default::default();
 
+    let freq = performance_frequency();
+    let mut ticks = performance_counter();
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -100,6 +102,9 @@ fn main() {
             }
         }
 
-        gb.step(&mut canvas, Some(&mut tiles_canvas));
+        let new_ticks = performance_counter();
+        let target_cycles = ((new_ticks - ticks) * CLOCK_FREQ) / freq;
+        ticks = new_ticks;
+        gb.step_cycles(target_cycles, &mut canvas, Some(&mut tiles_canvas));
     }
 }
